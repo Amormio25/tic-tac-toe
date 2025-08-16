@@ -1,39 +1,65 @@
 /**
- * handles state of the board (3x3)
- */
-const gameboard = (function() {
-    const rows = 3, columns = 3;
-    let board = [];
-
-    for (let i = 0; i < rows; i++) {
-        for (let j = 0; j < columns; j++) {
-            board[i][j] = '';
-        }
-    }
-
-    const showBoard = () => {
-
-    };
-
-    const placeMarker = () => {
-
-    };
-})();  
-
-/**
  * state of each square on the board
  * X: player one
  * O: player two
  */
-const cell = (function() {
+const cell = () => {
     let value = "";
 
     const setValue = (player) => {
         value = player;
-    }
+    };
     const getValue = () => value;
 
     return { setValue , getValue };
+};  
+
+/**
+ * handles state of the board (3x3)
+ */
+const gameboard = (function() {
+    const winPatterns = [ [1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7], [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7] ];
+
+    let board = [];
+    let playerXMarks = [];
+    let playerOMarks = [];
+    let cellID = 1;
+
+    const createBoard = () => {
+        board = [];
+        playerXMarks = [];
+        playerOMarks = [];
+        cellID = 1;
+        for (let i = 0; i < 9; i++) {
+            board[i] = cell();
+            board[i].setValue(cellID++);
+        }
+    }
+
+    const getBoard = () => board;
+
+    const showBoard = () => {
+        for (let i = 0; i < 9; i += 3) {
+            console.log(board[i].getValue() + " " + board[i+1].getValue() + " " + board[i+2].getValue());
+        }
+    };
+
+    const placeMark = (cellID, player) => {
+        player == "X" ? playerXMarks.push(cellID) : playerOMarks.push(cellID);
+        const index = board.findIndex(cell => cell.getValue() == cellID);
+        board[index].setValue(player);
+    };
+
+    const hasWinner = (player) => {
+        const playerMarks = (player == "playerX") ? playerXMarks : playerOMarks;
+        if (playerMarks.length >= 3 && winPatterns.some((pattern) => playerMarks.every(cellID => pattern.includes(cellID)))) {
+            return true;
+        } else if (player == "playerX" && playerXMarks.length == 5) {
+            return false;
+        }
+    }
+
+    return { createBoard, getBoard, showBoard, placeMark, hasWinner };
 })();  
 
 /**
@@ -42,7 +68,9 @@ const cell = (function() {
  * - win condition
  */
 const gameController = (function() {
-    const game = gameboard();
+    const board = gameboard;
+    gameboard.createBoard();
+
     const playerX = "playerX";
     const playerO = "playerO";
 
@@ -59,24 +87,46 @@ const gameController = (function() {
     let currentPlayer = players[0];
 
     const switchPlayerTurn = () => {
-        currentPlayer = (currentPlayer == playerX) ? playerO : playerX
+        currentPlayer = (currentPlayer == players[0]) ? players[1] : players[0]
     };
-    const getPlayerTurn = () => currentPlayer;
+    const getPlayerName = () => currentPlayer.name;
+    const getPlayerMark = () => currentPlayer.mark;
 
     // show board state, say whose turn 
     const newRound = () => {
+        console.log("-> Current Board:");
         board.showBoard();
-        console.log(`${getPlayerTurn().name}'s turn.`);
+        console.log(`-> ${getPlayerName()}'s turn.`);
+    };
+
+    const printResult = () => {
+        const result = board.hasWinner(getPlayerName());
+        if (result == true) {
+            console.log(`-> ${getPlayerName()} wins!`);
+        } else if (result == false) {
+            console.log("-> Tie Game!");
+        } else {
+            console.log("");
+            switchPlayerTurn();
+            playRound();
+        }
     }
 
-    // new round, set cell (update board and print choice), switch turns
-    const playRound = (row, column) => {
+    const playRound = () => {
         newRound();
-        board.placeMarker(row, column, getPlayerTurn().mark);
-        console.log(`${getPlayerTurn().name} marked row: ${row}, column: ${column}.`);
-        switchPlayerTurn();
-    }
+        setTimeout(() => {
+            let cellID = parseInt(prompt("Choose a cell to mark: "));
+            while (cellID < 1 || cellID > 9) {
+                cellID = parseInt(prompt("Invalid, please choose a valid cell."));
+            }
+            board.placeMark(cellID, getPlayerMark());
+            board.showBoard();
+            console.log(`-> ${getPlayerName()} marked cell ${cellID}.`);
+            printResult(); 
+        }, 2000);
+    };
     
-    return { playRound, getPlayerTurn };
+    return { playRound };
 })();  
 
+gameController.playRound();
