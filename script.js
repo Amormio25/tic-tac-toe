@@ -6,9 +6,7 @@
 const cell = () => {
     let value = "";
 
-    const setValue = (player) => {
-        value = player;
-    };
+    const setValue = (player) => value = player;
     const getValue = () => value;
 
     return { setValue , getValue };
@@ -23,16 +21,16 @@ const gameboard = (function() {
     let board = [];
     let playerXMarks = [];
     let playerOMarks = [];
-    let cellID = 1;
+    let cellValue = 1;
 
     const createBoard = () => {
         board = [];
         playerXMarks = [];
         playerOMarks = [];
-        cellID = 1;
+        cellValue = 1;
         for (let i = 0; i < 9; i++) {
             board[i] = cell();
-            board[i].setValue(cellID++);
+            board[i].setValue(cellValue++);
         }
     }
 
@@ -44,22 +42,24 @@ const gameboard = (function() {
         }
     };
 
-    const placeMark = (cellID, player) => {
-        player == "X" ? playerXMarks.push(cellID) : playerOMarks.push(cellID);
-        const index = board.findIndex(cell => cell.getValue() == cellID);
-        board[index].setValue(player);
+    const getValidCells = () => board.filter((cell) => typeof cell.getValue() === "number").map(cell => cell.getValue());
+
+    const placeMark = (cellValue, mark) => {
+        mark == "X" ? playerXMarks.push(cellValue) : playerOMarks.push(cellValue);
+        const index = board.findIndex(cell => cell.getValue() == cellValue);
+        board[index].setValue(mark);
     };
 
     const hasWinner = (player) => {
         const playerMarks = (player == "playerX") ? playerXMarks : playerOMarks;
-        if (playerMarks.length >= 3 && winPatterns.some((pattern) => playerMarks.every(cellID => pattern.includes(cellID)))) {
+        if (playerMarks.length >= 3 && winPatterns.some((pattern) => playerMarks.every(cellValue => pattern.includes(cellValue)))) {
             return true;
         } else if (player == "playerX" && playerXMarks.length == 5) {
             return false;
         }
     }
 
-    return { createBoard, getBoard, showBoard, placeMark, hasWinner };
+    return { createBoard, getBoard, showBoard, getValidCells, placeMark, hasWinner };
 })();  
 
 /**
@@ -93,14 +93,25 @@ const gameController = (function() {
     const getPlayerMark = () => currentPlayer.mark;
 
     // show board state, say whose turn 
-    const newRound = () => {
+    const showGameDetails = () => {
         console.log("-> Current Board:");
         board.showBoard();
         console.log(`-> ${getPlayerName()}'s turn.`);
     };
 
+    const setPlayerMark = () => {
+        let validCells = board.getValidCells();
+        let cellValue = prompt("Choose a cell to mark: ");
+        while (cellValue !== null && !validCells.includes(parseInt(cellValue))) {
+            cellValue = prompt("Invalid, please choose a valid cell.");
+        }
+        board.placeMark(parseInt(cellValue), getPlayerMark());
+        board.showBoard();
+        console.log(`-> ${getPlayerName()} marked cell ${cellValue}.`);
+    }
+
     const printResult = () => {
-        const result = board.hasWinner(getPlayerName());
+        let result = board.hasWinner(getPlayerName());
         if (result == true) {
             console.log(`-> ${getPlayerName()} wins!`);
         } else if (result == false) {
@@ -113,20 +124,18 @@ const gameController = (function() {
     }
 
     const playRound = () => {
-        newRound();
+        showGameDetails();
         setTimeout(() => {
-            let cellID = parseInt(prompt("Choose a cell to mark: "));
-            while (cellID < 1 || cellID > 9) {
-                cellID = parseInt(prompt("Invalid, please choose a valid cell."));
-            }
-            board.placeMark(cellID, getPlayerMark());
-            board.showBoard();
-            console.log(`-> ${getPlayerName()} marked cell ${cellID}.`);
-            printResult(); 
+            setPlayerMark();
+            printResult();
         }, 2000);
     };
+
+    const startGame = () => {
+        playRound();
+    }
     
-    return { playRound };
+    return { startGame };
 })();  
 
-gameController.playRound();
+gameController.startGame();
