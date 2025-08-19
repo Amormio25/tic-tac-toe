@@ -23,15 +23,9 @@ const gameboard = (function() {
     let playerOMarks = [];
     let cellValue = 1;
 
-    const createBoard = () => {
-        board = [];
-        playerXMarks = [];
-        playerOMarks = [];
-        cellValue = 1;
-        for (let i = 0; i < 9; i++) {
-            board[i] = cell();
-            board[i].setValue(cellValue++);
-        }
+    for (let i = 0; i < 9; i++) {
+        board[i] = cell();
+        board[i].setValue(cellValue++);
     }
 
     const getBoard = () => board;
@@ -51,15 +45,15 @@ const gameboard = (function() {
     };
 
     const hasWinner = (player) => {
-        const playerMarks = (player == "playerX") ? playerXMarks : playerOMarks;
-        if (playerMarks.length >= 3 && winPatterns.some((pattern) => playerMarks.every(cellValue => pattern.includes(cellValue)))) {
-            return true;
-        } else if (player == "playerX" && playerXMarks.length == 5) {
+        let playerMarks = (player == "playerX") ? playerXMarks : playerOMarks;
+        if (player == "playerX" && playerXMarks.length == 5) {
             return false;
+        } else if (playerMarks.length >= 3 && winPatterns.some(pattern => pattern.every(cellValue => playerMarks.includes(cellValue)))) {
+            return true;
         }
     }
 
-    return { createBoard, getBoard, showBoard, getValidCells, placeMark, hasWinner };
+    return { getBoard, showBoard, getValidCells, placeMark, hasWinner };
 })();  
 
 /**
@@ -69,8 +63,6 @@ const gameboard = (function() {
  */
 const gameController = (function() {
     const board = gameboard;
-    gameboard.createBoard();
-
     const playerX = "playerX";
     const playerO = "playerO";
 
@@ -99,15 +91,24 @@ const gameController = (function() {
         console.log(`-> ${getPlayerName()}'s turn.`);
     };
 
-    const setPlayerMark = () => {
+    const setPlayerMark = (cellValue) => {
         let validCells = board.getValidCells();
-        let cellValue = prompt("Choose a cell to mark: ");
-        while (cellValue !== null && !validCells.includes(parseInt(cellValue))) {
-            cellValue = prompt("Invalid, please choose a valid cell.");
+
+        /**
+         * UNCOMMENT TO PLAY CONSOLE VERSION
+         * let cellValue = prompt("-> Choose a cell to mark: ");
+         * while (cellValue !== null && !validCells.includes(parseInt(cellValue))) {
+         *     cellValue = prompt("-> Invalid, please choose a valid cell.");
+         * }
+         */
+        if (!validCells.includes(parseInt(cellValue))) {
+            console.log("Invalid, please choose a valid cell.");
+            return;
         }
         board.placeMark(parseInt(cellValue), getPlayerMark());
         board.showBoard();
         console.log(`-> ${getPlayerName()} marked cell ${cellValue}.`);
+        printResult(); // moved here to prevent infinite loop
     }
 
     const printResult = () => {
@@ -119,23 +120,72 @@ const gameController = (function() {
         } else {
             console.log("");
             switchPlayerTurn();
-            playRound();
+            // playRound(); commented out for event listener to get mark
         }
     }
 
-    const playRound = () => {
+    /**
+     * modified to take parameter for the display version
+     * -> remove parameters and uncomment code to play
+     *    console version
+     */
+    const playRound = (cellValue) => {
         showGameDetails();
-        setTimeout(() => {
-            setPlayerMark();
-            printResult();
-        }, 2000);
+        // setTimeout(() => {
+        //     setPlayerMark(cellValue);
+        //     printResult();
+        // }, 2000);
+        setPlayerMark(cellValue);
     };
-
-    const startGame = () => {
-        playRound();
-    }
     
-    return { startGame };
+    return { playRound, getPlayerName };
 })();  
 
-gameController.startGame();
+// gameController.startGame();
+
+/**
+ * displays flow and state of the game
+ * - board display
+ * - dom listener for player turn
+ */
+const displayController = () => {
+    const game = gameController;
+    const playerTurnDiv = document.querySelector(".turn");
+    const boardDiv = document.querySelector(".board-container");
+
+    const updateDisplay = () => {
+        boardDiv.textContent = "";
+
+        const board = gameboard.getBoard();
+        board.forEach((cell) => {
+            const cellDiv = document.createElement("div");
+            cellDiv.dataset.value = cell.getValue();
+            cellDiv.textContent = (typeof cell.getValue() !== "number") ? cell.getValue() : "";
+
+            cellDiv.classList.add("cell");
+            boardDiv.appendChild(cellDiv);
+        });
+        playerTurnDiv.textContent = `${game.getPlayerName()}'s turn`;
+    };
+
+    /** 
+     * listener for which cell is clicked when a cell is 
+     * clicked, modify playRound to take cell value 
+     * parameter that passes down to setPlayerMark instead 
+     * of prompting user in the console version
+     */
+    function handleClick(event) {
+        const cellValue = event.target.dataset.value;
+        game.playRound(cellValue);
+        updateDisplay();
+    }
+
+    /** 
+     * update display should be the first thing called 
+     * when displayController is called, then listen
+     */
+    updateDisplay();
+    boardDiv.addEventListener("click", handleClick);
+};
+
+displayController();
