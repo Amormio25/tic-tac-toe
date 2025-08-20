@@ -1,4 +1,8 @@
 /**
+ * COMMENT AND UNCOMMENT MARKERS TO PLAY CONSOLE OR DISPLAY VERSION
+ */
+
+/**
  * state of each square on the board
  * X: player one
  * O: player two
@@ -46,14 +50,28 @@ const gameboard = (function() {
 
     const hasWinner = (player) => {
         let playerMarks = (player == "playerX") ? playerXMarks : playerOMarks;
-        if (player == "playerX" && playerXMarks.length == 5) {
-            return false;
-        } else if (playerMarks.length >= 3 && winPatterns.some(pattern => pattern.every(cellValue => playerMarks.includes(cellValue)))) {
+        if (playerMarks.length >= 3 && winPatterns.some(pattern => pattern.every(cellValue => playerMarks.includes(cellValue)))) {
             return true;
+        } else if (player == "playerX" && playerXMarks.length == 5) {
+            return false;
         }
     }
 
-    return { getBoard, showBoard, getValidCells, placeMark, hasWinner };
+    const clearBoard = () => {
+        board = [];
+        cellValue = 1;
+        for (let i = 0; i < 9; i++) {
+            board[i] = cell();
+            board[i].setValue(cellValue++);
+        }
+    };
+
+    const clearPlayerMarks = () => {
+        playerXMarks = [];
+        playerOMarks = [];
+    };
+
+    return { getBoard, showBoard, getValidCells, placeMark, hasWinner, clearBoard, clearPlayerMarks };
 })();  
 
 /**
@@ -84,7 +102,6 @@ const gameController = (function() {
     const getPlayerName = () => currentPlayer.name;
     const getPlayerMark = () => currentPlayer.mark;
 
-    // show board state, say whose turn 
     const showGameDetails = () => {
         console.log("-> Current Board:");
         board.showBoard();
@@ -94,21 +111,21 @@ const gameController = (function() {
     const setPlayerMark = (cellValue) => {
         let validCells = board.getValidCells();
 
-        /**
-         * UNCOMMENT TO PLAY CONSOLE VERSION
-         * let cellValue = prompt("-> Choose a cell to mark: ");
-         * while (cellValue !== null && !validCells.includes(parseInt(cellValue))) {
-         *     cellValue = prompt("-> Invalid, please choose a valid cell.");
-         * }
-         */
+        // let cellValue = prompt("-> Choose a cell to mark: ");
+        // while (cellValue !== null && !validCells.includes(parseInt(cellValue))) {
+        //     cellValue = prompt("-> Invalid, please choose a valid cell.");
+        // }
+         
+        // this short code block is for display version only
         if (!validCells.includes(parseInt(cellValue))) {
             console.log("Invalid, please choose a valid cell.");
             return;
         }
+
         board.placeMark(parseInt(cellValue), getPlayerMark());
         board.showBoard();
         console.log(`-> ${getPlayerName()} marked cell ${cellValue}.`);
-        printResult(); // moved here to prevent infinite loop
+        printResult(); 
     }
 
     const printResult = () => {
@@ -120,28 +137,28 @@ const gameController = (function() {
         } else {
             console.log("");
             switchPlayerTurn();
-            // playRound(); commented out for event listener to get mark
+            // playRound(); this line is for display version only
         }
     }
 
-    /**
-     * modified to take parameter for the display version
-     * -> remove parameters and uncomment code to play
-     *    console version
-     */
+    // remove cellValue parameter for console version (prompt implementation)
     const playRound = (cellValue) => {
         showGameDetails();
+        setPlayerMark(cellValue); // this line is for display version only
+
         // setTimeout(() => {
         //     setPlayerMark(cellValue);
         //     printResult();
         // }, 2000);
-        setPlayerMark(cellValue);
+    };
+
+    const restartGame = () => {
+        board.clearBoard();
+        board.clearPlayerMarks();
     };
     
-    return { playRound, getPlayerName };
+    return { playRound, getPlayerName, restartGame };
 })();  
-
-// gameController.startGame();
 
 /**
  * displays flow and state of the game
@@ -151,6 +168,7 @@ const gameController = (function() {
 const displayController = () => {
     const game = gameController;
     const playerTurnDiv = document.querySelector(".turn");
+    const restartButton = document.querySelector(".restart");
     const boardDiv = document.querySelector(".board-container");
 
     const updateDisplay = () => {
@@ -163,9 +181,11 @@ const displayController = () => {
             cellDiv.textContent = (typeof cell.getValue() !== "number") ? cell.getValue() : "";
 
             cellDiv.classList.add("cell");
+            cellDiv.classList.toggle("playerO", cell.getValue() === "O");
             boardDiv.appendChild(cellDiv);
         });
         playerTurnDiv.textContent = `${game.getPlayerName()}'s turn`;
+        playerTurnDiv.classList.toggle("playerO", game.getPlayerName() === "playerO");
     };
 
     /** 
@@ -179,13 +199,17 @@ const displayController = () => {
         game.playRound(cellValue);
         updateDisplay();
     }
-
+    
     /** 
      * update display should be the first thing called 
      * when displayController is called, then listen
      */
     updateDisplay();
     boardDiv.addEventListener("click", handleClick);
+    restartButton.addEventListener("click", () => {
+        game.restartGame();
+        updateDisplay();
+    });
 };
 
 displayController();
