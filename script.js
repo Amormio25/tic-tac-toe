@@ -29,8 +29,10 @@ const gameboard = (function() {
     let board = [];
     let playerXMarks = [];
     let playerOMarks = [];
-    let id = 1, value = 1;
     let gameOverStatus = false;
+
+    let id = 1
+    let value = 1;
 
     for (let i = 0; i < 9; i++) {
         board[i] = cell();
@@ -64,10 +66,10 @@ const gameboard = (function() {
     const isGameOver = () => gameOverStatus;
 
     const hasWinner = (player) => {
-        let playerMarks = (player == "playerX") ? playerXMarks : playerOMarks;
+        const playerMarks = (player == "playerX") ? playerXMarks : playerOMarks;
         if (playerMarks.length >= 3 && winPatterns.some(pattern => pattern.every(id => playerMarks.includes(id)))) {
-            gameOverStatus = true;
             const winPattern = winPatterns.find(pattern => pattern.every(id => playerMarks.includes(id)));
+            gameOverStatus = true;
             return winPattern;
         } else if (player == "playerX" && playerXMarks.length == 5) {
             gameOverStatus = true;
@@ -78,7 +80,10 @@ const gameboard = (function() {
     const clearBoard = () => {
         board = [];
         gameOverStatus = false;
-        id = 1, value = 1;
+
+        id = 1;
+        value = 1;
+
         for (let i = 0; i < 9; i++) {
             board[i] = cell();
             board[i].setID(id++);
@@ -157,11 +162,9 @@ const gameController = (function() {
         }
     }
 
-    // remove cellValue parameter for console version (prompt implementation)
+    // remove id parameter for console version (prompt implementation)
     const playRound = (id) => {
-        if (board.isGameOver()) {
-            return;
-        }
+        if (board.isGameOver()) return;
         if (board.isCellMarked(id)) {
             console.log("-> Invalid move! Cell is already marked.");
             return;
@@ -223,27 +226,31 @@ const displayController = () => {
      * of prompting user in the console version
      */
     function handleClick(event) {
+        if (gameboard.isGameOver()) return;
         const id = event.target.dataset.id;
         const result =  game.playRound(id);
-        displayGameResult(result);
+
         updateDisplay();
+        displayGameResult(result);
     }
     
     const displayGameResult = (result) => {
-        if (result == undefined) {
-            return;
+        if (result == undefined) return;
+        if (result) {
+            setTimeout(() => animateWin(result), 200);
+            setTimeout(() => displayModal(result), 1500)  
+        } else {
+            displayModal(result)
         }
-        // if (result) {
-        //     animateWin(result);
-        // }
-        displayModal(result);
     };
 
     const animateWin = (result) => {
-        console.log(result);
-        const winningDivs = [...boardDiv.children].filter((cellDiv) => result.includes(parseInt(cellDiv.dataset.id)));
-        console.log(winningDivs)
-        winningDivs.forEach(div => div.textContent = "hello")
+        const winDivs = [...boardDiv.children].filter((cellDiv) => result.includes(parseInt(cellDiv.dataset.id)));
+        winDivs.forEach((div, index) => {
+            setTimeout(() => {
+                div.style.color = "lime";
+            }, index * 400);
+        });
     };
 
     const displayModal = (result) => {
@@ -254,7 +261,11 @@ const displayController = () => {
 
         modal.showModal();
         modal.classList.add("open");
-        if (game.getPlayerName() == "playerO") resultDisplay.classList.add("playerO");
+        if (game.getPlayerName() == "playerO") {
+            resultDisplay.classList.add("playerO");
+        } else {
+            resultDisplay.classList.remove("playerO");
+        }
         resultDisplay.textContent = (result) ? `${game.getPlayerName()} wins!` : "Tie Game!";
         
         playButton.addEventListener("click", () => {
